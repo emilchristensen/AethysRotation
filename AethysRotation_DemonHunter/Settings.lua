@@ -29,7 +29,8 @@ AR.GUISettings.APL.DemonHunter = {
             -- Abilities
             ArcaneTorrent = {true, false},
             ChaosBlades = {true, false},
-            Nemesis = {true, false}
+            Nemesis = {true, false},
+            FuryoftheIllidari = {true, false},
         }
     }
 }
