@@ -8,11 +8,17 @@ local AR = AethysRotation
 --- ============================ CONTENT ============================
 -- All settings here should be moved into the GUI someday.
 AR.GUISettings.APL.DemonHunter = {
+    Commons = {
+        -- {Display OffGCD as OffGCD, ForceReturn}
+        OffGCDasOffGCD = {
+            -- Abilities
+            ConsumeMagic = {true, false}
+        }
+    },
     Vengeance = {
         -- {Display OffGCD as OffGCD, ForceReturn}
         OffGCDasOffGCD = {
             -- Abilities
-            ConsumeMagic = {true, false},
             DemonSpikes = {true, false},
             InfernalStrike = {true, false}
         }
