@@ -84,7 +84,6 @@ local I = Item.DemonHunter.Havoc
 
 -- Rotation vars
 local ShouldReturn; -- Used to get the return string
-local BDIdentifier = tostring(S.BladeDance:ID());
 local ConsumeMagicRange = S.ConsumeMagic:MaximumRange();
 local DesiredTargets = 1;
 
@@ -481,12 +480,10 @@ local function APLNormal()
   end
 
   -- actions.normal+=/demons_bite
-  if false then
-    if AR.Cast(S.DemonsBite) then return "Cast DemonsBite"; end
-  end
+  if AR.Cast(S.DemonsBite) then return "Cast DemonsBite"; end
 
   -- actions.normal+=/throw_glaive,if=buff.out_of_range.up
-  if false then
+  if Target:IsInRange(false, tostring(S.ThrowGlaive:ID())) then
     if AR.Cast(S.ThrowGlaive) then return "Cast ThrowGlaive"; end
   end
   
