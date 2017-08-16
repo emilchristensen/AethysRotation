@@ -31,6 +31,7 @@ AR.GUISettings.APL.DemonHunter = {
             ChaosBlades = {true, false},
             Nemesis = {true, false},
             FuryoftheIllidari = {true, false},
+            Metamorphosis = {true, false},
         }
     }
 }
