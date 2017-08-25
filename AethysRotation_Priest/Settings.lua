@@ -10,6 +10,7 @@
   local GUI = AC.GUI;
   local CreateChildPanel = GUI.CreateChildPanel;
   local CreatePanelOption = GUI.CreatePanelOption;
+  local CreateARPanelOption = AR.GUI.CreateARPanelOption;
 
 --- ============================ CONTENT ============================
   -- All settings here should be moved into the GUI someday.
@@ -18,6 +19,10 @@
     },
     Shadow = {
       DispersionHP = 10,
+      ShowPoPP = false,
+      UseSilence = false,
+      UseMindBomb = false,
+      
       -- {Display GCD as OffGCD, ForceReturn}
       GCDasOffGCD = {
         -- Abilities
@@ -32,6 +37,8 @@
         Dispersion = {true, false},
         -- Racials
         Racials = {true, false},
+        -- Items
+        PotionOfProlongedPower = {true, false},
       }
     },
   };
@@ -42,11 +49,16 @@
   local ARPanel = AR.GUI.Panel;
   local CP_Priest = CreateChildPanel(ARPanel, "Priest");
   local CP_Shadow = CreateChildPanel(CP_Priest, "Shadow");
-
+ 
   CreatePanelOption("Slider", CP_Shadow, "APL.Priest.Shadow.DispersionHP", {0, 100, 1}, "Dispersion HP", "Set the Dispersion HP threshold.");
-  CreatePanelOption("CheckButton", CP_Shadow, "APL.Priest.Shadow.GCDasOffGCD.Shadowfiend", "Shadowfiend as Off GCD", "Enable if you want to put Shadowfiend shown as Off GCD (top icons) instead of Main.");
-  CreatePanelOption("CheckButton", CP_Shadow, "APL.Priest.Shadow.GCDasOffGCD.Mindbender", "Mindbender as Off GCD", "Enable if you want to put Mindbender shown as Off GCD (top icons) instead of Main.");
-  CreatePanelOption("CheckButton", CP_Shadow, "APL.Priest.Shadow.GCDasOffGCD.Shadowform", "Shadowform as Off GCD", "Enable if you want to put Shadowform shown as Off GCD (top icons) instead of Main.");
-  CreatePanelOption("CheckButton", CP_Shadow, "APL.Priest.Shadow.OffGCDasOffGCD.PowerInfusion", "Power Infusion as Off GCD", "Enable if you want to put Power Infusion shown as Off GCD (top icons) instead of Main.");
-  CreatePanelOption("CheckButton", CP_Shadow, "APL.Priest.Shadow.OffGCDasOffGCD.Dispersion", "Dispersion as Off GCD", "Enable if you want to put Dispersion shown as Off GCD (top icons) instead of Main.");
-  CreatePanelOption("CheckButton", CP_Shadow, "APL.Priest.Shadow.OffGCDasOffGCD.Racials", "Racials as Off GCD", "Enable if you want to put Racials (Arcane Torrent, Berserking, ...) shown as Off GCD (top icons) instead of Main.");
+  CreateARPanelOption("GCDasOffGCD", CP_Shadow, "APL.Priest.Shadow.GCDasOffGCD.Shadowfiend", "Shadowfiend");
+  CreateARPanelOption("GCDasOffGCD", CP_Shadow, "APL.Priest.Shadow.GCDasOffGCD.Mindbender", "Mindbender");
+  CreateARPanelOption("GCDasOffGCD", CP_Shadow, "APL.Priest.Shadow.GCDasOffGCD.Shadowform", "Shadowform");
+  CreateARPanelOption("OffGCDasOffGCD", CP_Shadow, "APL.Priest.Shadow.OffGCDasOffGCD.PowerInfusion", "Power Infusion");
+  CreateARPanelOption("OffGCDasOffGCD", CP_Shadow, "APL.Priest.Shadow.OffGCDasOffGCD.Dispersion", "Dispersion");
+  CreateARPanelOption("OffGCDasOffGCD", CP_Shadow, "APL.Priest.Shadow.OffGCDasOffGCD.Racials", "Racials");
+  CreatePanelOption("CheckButton", CP_Shadow, "APL.Priest.Shadow.ShowPoPP", "Show Potion of Prolonged Power", "Enable this if you want it to show you when to use Potion of Prolonged Power.");
+  CreatePanelOption("CheckButton", CP_Shadow, "APL.Priest.Shadow.UseSilence", "Use Silence for Sephuz", "Enable this if you want it to show you when to use Silence to proc Sephuz's Secret (only when equipped). ");
+  CreatePanelOption("CheckButton", CP_Shadow, "APL.Priest.Shadow.UseMindBomb", "Use Mind Bomb for Sephuz", "Enable this if you want it to show you when to use Mind Bomb to proc Sephuz's Secret (only when equipped).");
+  
+  -- CreateARPanelOption("OffGCDasOffGCD", CP_Shadow, "APL.Priest.Shadow.OffGCDasOffGCD.PotionOfProlongedPower", "Potion Of Prolonged Power");
