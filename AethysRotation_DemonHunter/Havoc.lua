@@ -108,7 +108,7 @@ local function MetamorphosisAdjustedCooldown()
     local RPPM = 3.36;
 
     local Reduction = 5.0;
-    
+
     ReductionPerSecond = ReductionPerSecond + (Reduction / (60.0 / RPPM));
   end
 
@@ -476,7 +476,7 @@ local function APLNormal()
     then
       if AR.Cast(S.EyeBeam) then return "Cast EyeBeam"; end
     end
-    
+
     -- actions.normal+=/annihilation,if=(talent.demon_blades.enabled|!talent.momentum.enabled|buff.momentum.up|fury.deficit<30+buff.prepared.up*8|buff.metamorphosis.remains<5)&!variable.pooling_for_blade_dance
     if S.Annihilation:IsReady() and ((S.DemonBladesL:IsAvailable()
         or not S.Momentum:IsAvailable()
@@ -488,7 +488,7 @@ local function APLNormal()
     then
       if AR.Cast(S.Annihilation) then return "Cast Annihiliation"; end
     end
-    
+
     -- actions.normal+=/throw_glaive,if=talent.bloodlet.enabled&(!talent.master_of_the_glaive.enabled|!talent.momentum.enabled|buff.momentum.up)&raid_event.adds.in>recharge_time+cooldown
     -- No raid_events
     if S.ThrowGlaive:IsCastable() and (S.Bloodlet:IsAvailable()
@@ -496,7 +496,7 @@ local function APLNormal()
     then
       if AR.Cast(S.ThrowGlaive) then return "Cast ThrowGlaive"; end
     end
-    
+
     -- actions.normal+=/throw_glaive,if=!talent.bloodlet.enabled&buff.metamorphosis.down&spell_targets>=3
     if S.ThrowGlaive:IsCastable() and (not S.Bloodlet:IsAvailable()
       and not Player:Buff(S.Metamorphosis)
@@ -521,12 +521,13 @@ local function APLNormal()
     then
       if AR.Cast(S.ChaosStrike) then return "Cast ChaosStrike"; end
     end
-    
+
     -- actions.normal+=/fel_rush,if=!talent.momentum.enabled&raid_event.movement.in>charges*10&(talent.demon_blades.enabled|buff.metamorphosis.down)
     -- No raid_events
     if S.FelRush:IsCastable()
       and (not S.Momentum:IsAvailable()
         and (S.DemonBlades:IsAvailable() or not Player:Buff(S.Metamorphosis)))
+
     then
       if AR.Cast(S.FelRush) then return "Cast FelRush"; end
     end
