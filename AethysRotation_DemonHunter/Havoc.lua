@@ -63,7 +63,7 @@ Spell.DemonHunter.Havoc = {
   -- Legendaries
 
   -- Misc
-  PoolEnergy = Spell(9999000010),
+  PoolFury = Spell(9999000010)
 
   -- Macros
 }
@@ -183,17 +183,18 @@ end
 -- # "Getting ready to use meta" conditions, this is used in a few places.
 -- actions+=/variable,name=pooling_for_meta,value=!talent.demonic.enabled&cooldown.metamorphosis.remains<6&fury.deficit>30&(!variable.waiting_for_nemesis|cooldown.nemesis.remains<10)&(!variable.waiting_for_chaos_blades|cooldown.chaos_blades.remains<6)
 local function PoolingForMeta()
-  return not S.Demonic:IsAvailable()
-     and S.Metamorphosis:CooldownRemains() < 6
-     and Player:FuryDeficit() > 30
-     and (
-     not WaitingForNemesis()
-       or S.Nemesis:CooldownRemains() < 10
-     )
-     and (
-       not WaitingForChaosBlades()
-       or S.ChaosBlades.CooldownRemains() < 6
-     )
+  return AR.CDsON() 
+    and not S.Demonic:IsAvailable()
+    and S.Metamorphosis:CooldownRemains() < 6
+    and Player:FuryDeficit() > 30
+    and (
+    not WaitingForNemesis()
+      or S.Nemesis:CooldownRemains() < 10
+    )
+    and (
+      not WaitingForChaosBlades()
+      or S.ChaosBlades.CooldownRemains() < 6
+    )
 end
 
 -- # Blade Dance conditions. Always if First Blood is talented or the T20 4pc set bonus, otherwise at 6+ targets with Chaos Cleave or 3+ targets without.
@@ -201,24 +202,23 @@ end
 local function ShouldBladeDance()
   return S.FirstBlood:IsAvailable()
       or AC.Tier20_4Pc
-      or Cache.EnemiesCount[8] >= 3 + (S.ChaosCleave:IsAvailable() and 3 or 0)
+      or (AR.AoEON() and Cache.EnemiesCount[8] >= 3 + (S.ChaosCleave:IsAvailable() and 3 or 0))
 end
 
 -- # Blade Dance pooling condition, so we don't spend too much fury on Chaos Strike when we need it soon.
 -- actions+=/variable,name=pooling_for_blade_dance,value=variable.blade_dance&(fury<75-talent.first_blood.enabled*20)
 local function PoolingForBladeDance()
   return ShouldBladeDance()
-     and Player:Fury() < 75 - (S.FirstBlood:IsAvailable() and 20 or 0)
+     and (Player:Fury() < 75 - (S.FirstBlood:IsAvailable() and 20 or 0))
 end
 
 -- TODO raid_event.adds.up & raid_event.adds.in
 -- # Chaos Strike pooling condition, so we don't spend too much fury when we need it for Chaos Cleave AoE
 -- actions+=/variable,name=pooling_for_chaos_strike,value=talent.chaos_cleave.enabled&fury.deficit>40&!raid_event.adds.up&raid_event.adds.in<2*gcd
 local function PoolingForChaosStrike()
-  -- return S.ChaosCleave:IsAvailable()
-  --    and Player:FuryDeficit() > 40
-  --    and not raid_event.adds.up&raid_event.adds.in<2*gcd
-  return false;
+  return S.ChaosCleave:IsAvailable()
+    and Player:FuryDeficit() > 40
+    --and not raid_event.adds.up&raid_event.adds.in<2*gcd
 end
 
 --- ======= ACTION LISTS =======
@@ -261,7 +261,7 @@ local function APLCDs()
   if S.ChaosBlades:IsCastable() and (Player.Buff(S.Metamorphosis)
     or MetamorphosisAdjustedCooldown() > 60
     or Target:TimeToDie() <= 12)
-  then 
+  then
     if AR.Cast(S.ChaosBlades) then return "Cast ChaosBlades"; end
   end
 
@@ -270,8 +270,7 @@ local function APLCDs()
 
   -- actions.cooldown+=/potion,if=buff.metamorphosis.remains>25|target.time_to_die<30
   -- TODO Add support for potions
-
-  return false;
+  return false
 end
 
 local function APLDemonic()
@@ -283,8 +282,9 @@ local function APLDemonic()
   end
 
   -- TODO This might not be practical since we want to show the icon before stuff is off GCD
-  if AR.CDsON() and Player:GCDRemains() == 0 then
-    return APLCDs();
+  if AR.CDsON() then
+    ShouldReturn = APLCDs();
+    if ShouldReturn then return ShouldReturn; end
   end
 
   -- TODO Implement Demonic APL
@@ -311,7 +311,11 @@ local function APLDemonic()
   -- actions.demonic+=/fel_rush,if=movement.distance>15|(buff.out_of_range.up&!talent.momentum.enabled)
   -- actions.demonic+=/vengeful_retreat,if=movement.distance>15
 
-  return false;
+  if Player:AffectingCombat() then
+    if AR.Cast(S.PoolFury) then return "Cast PoolFocus" end
+  end
+  
+  return false
 end
 
 local function APLNormal()
@@ -335,9 +339,9 @@ local function APLNormal()
   end
 
   if Target:Exists() and Player:CanAttack(Target) and not Target:IsDeadOrGhost() then
-    -- TODO This might not be practical since we want to show the icon before stuff is off GCD
-    if AR.CDsON() and Player:GCDRemains() == 0 then
-      return APLCDs();
+    if AR.CDsON() then
+      ShouldReturn = APLCDs();
+      if ShouldReturn then return ShouldReturn; end
     end
 
 
@@ -373,8 +377,11 @@ local function APLNormal()
 
     -- # Use Fel Barrage at max charges, saving it for Momentum and adds if possible.
     -- actions.normal+=/fel_barrage,if=(buff.momentum.up|!talent.momentum.enabled)&(active_enemies>desired_targets|raid_event.adds.in>30)
-    if S.FelBarrage:IsCastable() and ((Player:Buff(S.Momentum) or not S.Momentum:IsAvailable())
-      and Cache.EnemiesCount[30] > DesiredTargets)
+    if AR.AoEON()
+      and S.FelBarrage:IsCastable()
+      and ((Player:Buff(S.Momentum) or not S.Momentum:IsAvailable())
+        and Cache.EnemiesCount[30] > DesiredTargets
+      )
     then
       if AR.Cast(S.FelBarrage) then return "Cast FelBarrage"; end
     end
@@ -389,17 +396,19 @@ local function APLNormal()
 
     -- actions.normal+=/felblade,if=fury<15&(cooldown.death_sweep.remains<2*gcd|cooldown.blade_dance.remains<2*gcd)
     -- TODO Check if S.BladeDance:CooldownRemains() also checks DeathSweep
-    if S.FelBlade:IsCastable() and (Player:Fury() < 15
-      and (S.BladeDance:CooldownRemains() < 2 * Player:GCD()))
+    if S.FelBlade:IsCastable()
+      and Player:Fury() < 15
+      and S.BladeDance:CooldownRemains() < 2 * Player:GCD()
     then
       if AR.Cast(S.FelBlade) then return "Cast FelBlade"; end
     end
 
     -- actions.normal+=/death_sweep,if=variable.blade_dance
-    if S.DeathSweep:IsCastable() and ShouldBladeDance() and Player:Buff(S.Metamorphosis) then
-      if Player:Fury() >= S.DeathSweep:Cost() then
-        if Ar.Cast(S.DeathSweep) then return "Cast DeathSweep"; end
-      end
+    if S.DeathSweep:IsReady()
+      and ShouldBladeDance()
+      and Player:Buff(S.Metamorphosis)
+    then
+      if Ar.Cast(S.DeathSweep) then return "Cast DeathSweep"; end
     end
 
     -- actions.normal+=/fel_rush,if=charges=2&!talent.momentum.enabled&!talent.fel_mastery.enabled
@@ -411,10 +420,10 @@ local function APLNormal()
     end
 
     -- actions.normal+=/fel_eruption
-    if S.FelEruption:IsCastable() and S.FelEruption:IsAvailable() then
-      if Player:Fury() >= S.FelEruption:Cost() then
-        if AR.Cast(S.FelEruption) then return "Cast FelEruption"; end
-      end
+    if S.FelEruption:IsReady()
+      and S.FelEruption:IsAvailable()
+    then
+      if AR.Cast(S.FelEruption) then return "Cast FelEruption"; end
     end
 
     -- actions.normal+=/fury_of_the_illidari,if=(active_enemies>desired_targets)|(raid_event.adds.in>55&(!talent.momentum.enabled|buff.momentum.up)&(!talent.chaos_blades.enabled|buff.chaos_blades.up|cooldown.chaos_blades.remains>30|target.time_to_die<cooldown.chaos_blades.remains))
@@ -434,10 +443,11 @@ local function APLNormal()
     end
 
     -- actions.normal+=/blade_dance,if=variable.blade_dance&!cooldown.metamorphosis.ready
-    if S.BladeDance:IsCastable() and ShouldBladeDance() and not S.Metamorphosis:IsReady() then
-      if Player:Fury() >= S.BladeDance:Cost() then
-        if AR.Cast(S.BladeDance) then return "Cast BladeDance"; end
-      end
+    if S.BladeDance:IsReady()
+      and ShouldBladeDance()
+      and not S.Metamorphosis:IsReady()
+    then
+      if AR.Cast(S.BladeDance) then return "Cast BladeDance"; end
     end
 
     -- actions.normal+=/throw_glaive,if=talent.bloodlet.enabled&spell_targets>=2&(!talent.master_of_the_glaive.enabled|!talent.momentum.enabled|buff.momentum.up)&(spell_targets>=3|raid_event.adds.in>recharge_time+cooldown)
@@ -450,25 +460,25 @@ local function APLNormal()
     end
 
     -- actions.normal+=/felblade,if=fury.deficit>=30+buff.prepared.up*8
-    if S.FelBlade:IsCastable() and Player:FuryDeficit() >= 30 + Player:Buff(S.Prepared) and 8 or 0 then
+    if S.FelBlade:IsCastable()
+      and Player:FuryDeficit() >= (30 + Player:Buff(S.Prepared) and 8 or 0)
+    then
       if AR.Cast(S.FelBlade) then return "Cast FelBlade"; end
     end
 
     -- actions.normal+=/eye_beam,if=spell_targets.eye_beam_tick>desired_targets|(spell_targets.eye_beam_tick>=3&raid_event.adds.in>cooldown)|(talent.blind_fury.enabled&fury.deficit>=35)|set_bonus.tier21_2pc
     -- No raid_events
     -- Using 12 yard radius in place of 20 yard conal range.
-    if S.EyeBeam:IsCastable() and (Cache.EnemiesCount[12] > DesiredTargets
+    if S.EyeBeam:IsReady() and (Cache.EnemiesCount[12] > DesiredTargets
       or (S.BlindFury:IsAvailable() and Player:FuryDeficit() >= 35))
       -- Enable when T21 is implemented
       --or AC.Tier21_2Pc
     then
-      if Player:Fury() >= S.EyeBeam:Cost() then
-        if AR.Cast(S.EyeBeam) then return "Cast EyeBeam"; end
-      end
+      if AR.Cast(S.EyeBeam) then return "Cast EyeBeam"; end
     end
     
     -- actions.normal+=/annihilation,if=(talent.demon_blades.enabled|!talent.momentum.enabled|buff.momentum.up|fury.deficit<30+buff.prepared.up*8|buff.metamorphosis.remains<5)&!variable.pooling_for_blade_dance
-    if S.Annihilation:IsCastable() and ((S.DemonBladesL:IsAvailable()
+    if S.Annihilation:IsReady() and ((S.DemonBladesL:IsAvailable()
         or not S.Momentum:IsAvailable()
         or Player:Buff(S.Momentum)
         or Player:FuryDeficit() < 30 + (Player:Buff(S.Prepared) and 8 or 0)
@@ -476,9 +486,7 @@ local function APLNormal()
       )
       and not PoolingForBladeDance())
     then
-      if Player:Fury() >= S.Annihilation:Cost() then
-        if AR.Cast(S.Annihilation) then return "Cast Annihiliation"; end
-      end
+      if AR.Cast(S.Annihilation) then return "Cast Annihiliation"; end
     end
     
     -- actions.normal+=/throw_glaive,if=talent.bloodlet.enabled&(!talent.master_of_the_glaive.enabled|!talent.momentum.enabled|buff.momentum.up)&raid_event.adds.in>recharge_time+cooldown
@@ -497,21 +505,28 @@ local function APLNormal()
       if AR.Cast(S.ThrowGlaive) then return "Cast ThrowGlaive"; end
     end
 
+    print(S.ChaosStrike:IsCastable(),
+      (S.DemonBlades:IsAvailable() or not S.Momentum:IsAvailable() or Player:Buff(S.Momentum) or Player:FuryDeficit() < 30 + (Player:Buff(S.Prepared) and 8 or 0)),
+      not PoolingForChaosStrike(),
+      not PoolingForMeta(),
+      not PoolingForBladeDance()
+    );
+
     -- actions.normal+=/chaos_strike,if=(talent.demon_blades.enabled|!talent.momentum.enabled|buff.momentum.up|fury.deficit<30+buff.prepared.up*8)&!variable.pooling_for_chaos_strike&!variable.pooling_for_meta&!variable.pooling_for_blade_dance
-    if S.ChaosStrike:IsCastable() and ((S.DemonBlades:IsAvailable() or not S.Momentum:IsAvailable() or Player:Buff(S.Momentum) or Player:FuryDeficit() < 30 + (Player:Buff(S.Prepared) and 8 or 0))
+    if S.ChaosStrike:IsCastable() and (
+      (S.DemonBlades:IsAvailable() or not S.Momentum:IsAvailable() or Player:Buff(S.Momentum) or Player:FuryDeficit() < 30 + (Player:Buff(S.Prepared) and 8 or 0))
       and not PoolingForChaosStrike()
       and not PoolingForMeta()
       and not PoolingForBladeDance())
     then
-      if Player:Fury() >= S.ChaosStrike:Cost() then
-        if AR.Cast(S.ChaosStrike) then return "Cast ChaosStrike"; end
-      end
+      if AR.Cast(S.ChaosStrike) then return "Cast ChaosStrike"; end
     end
     
     -- actions.normal+=/fel_rush,if=!talent.momentum.enabled&raid_event.movement.in>charges*10&(talent.demon_blades.enabled|buff.metamorphosis.down)
     -- No raid_events
-    if S.FelRush:IsCastable() and (not S.Momentum:IsAvailable() 
-      and (S.DemonBlades:IsAvailable() or not Player:Buff(S.Metamorphosis)))
+    if S.FelRush:IsCastable()
+      and (not S.Momentum:IsAvailable()
+        and (S.DemonBlades:IsAvailable() or not Player:Buff(S.Metamorphosis)))
     then
       if AR.Cast(S.FelRush) then return "Cast FelRush"; end
     end
@@ -522,19 +537,23 @@ local function APLNormal()
     end
 
     -- actions.normal+=/throw_glaive,if=buff.out_of_range.up
-    if S.ThrowGlaive:IsCastable() and Target:IsInRange(false, tostring(S.ThrowGlaive:ID())) then
+    if S.ThrowGlaive:IsCastable()
+      and Target:IsInRange(false, tostring(S.ThrowGlaive:ID()))
+    then
       if AR.Cast(S.ThrowGlaive) then return "Cast ThrowGlaive"; end
     end
 
     -- actions.normal+=/felblade,if=movement.distance>15|buff.out_of_range.up
-    if S.FelBlade:IsCastable() and (not Target:IsInRange(5)
-      or Target:IsInRange(false, tostring(S.FelBlade:ID())))
+    if S.FelBlade:IsCastable()
+      and (not Target:IsInRange(5) or Target:IsInRange(false, tostring(S.FelBlade:ID())))
     then
       if AR.Cast(S.FelBlade) then return "Cast FelBlade"; end
     end
 
     -- actions.normal+=/fel_rush,if=movement.distance>15|(buff.out_of_range.up&!talent.momentum.enabled)
-    if S.FelRush:IsCastable() and (not Target:IsInRange(5) or not S.Momentum:IsAvailable()) then
+    if S.FelRush:IsCastable()
+      and (not Target:IsInRange(5) or not S.Momentum:IsAvailable())
+    then
       if AR.Cast(S.FelRush) then return "Cast FelRush"; end
     end
 
@@ -547,7 +566,7 @@ local function APLNormal()
     end
   end
 
-  return false;
+  return false
 end
 
 local function APL()
@@ -563,7 +582,11 @@ local function APL()
   else
     ShouldReturn = APLNormal();
   end
-  if ShouldReturn then return ShouldReturn; end
+  if ShouldReturn then return print(ShouldReturn); end
+  
+  if Player:AffectingCombat() then
+    if AR.Cast(S.PoolFury) then return "Cast PoolFocus" end
+  end
 
 end
 
